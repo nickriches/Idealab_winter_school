@@ -1,0 +1,243 @@
+---
+name: "Data munging (wrangling) workshop"  
+author: "Nick Riches"  
+output:  
+  html_document:  
+    number_sections: yes
+    toc: yes
+    toc_float:
+      collapsed: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE, message = FALSE)
+```
+
+# The dataset
+
+We are going to be exploring a recently published dataset published by Hartshorne, Tenenbaum and Pinker:
+
+Hartshorne, J. K., Tenenbaum, J. B., & Pinker, S. (2018). A critical period for second language acquisition: Evidence from 2/3 million English speakers. Cognition. https://doi.org/10.1016/j.cognition.2018.04.007
+
+This explores the English grammatical abilites of 2/3 million individuals who have acquired English as a second language. As such, it presents an *unparallelled* opportunity to test theories of L1 transfer during second language learning. It also provides an opportunity to show off the power or R!!
+
+The data has been published on the Open Science Framework at [https://osf.io/pyb8s/](https://osf.io/pyb8s/)
+
+# Basics
+
+## Setting the working directory
+
+Initially you need to the set the Working Directory to the location of the source file, as follows
+
+![Set Working Directory to source file](set_directory.png)
+
+## Loading packages
+
+```{r}
+
+# Load tidyverse (needs to be installed)
+
+library(tidyverse)
+
+# NB a really great way to manage packages is with the "pacman" package, but we're not going to be looking at this.
+
+```
+
+## Reading in the data
+
+Now we're going to read in the data... but it will take some time.
+
+```{r}
+
+df <-read.csv("data.csv")
+
+```
+
+## Viewing the data
+
+Take a peek at the data either using `View(df)` (to view it in a special viewer), or `head(df)` (to view it in the console / RMarkdown file)
+
+# Wide versus long formats
+
+We can see that each row corresponds to a single participant, and that there are multiple observations per row (different variable for different questions). This is a *wide* format, and is the wrong format for doing summaries and analyis. (NB I think Hartshorne et al. use this format because it gobbles up less memory).
+
+A much better format is a 'long' or 'tidy' format:
+
+![](wide_versus_long_data.png)
+
+We're going to find out how to do this in a moment.
+
+# Exploring the data
+
+Now let`s look at the languages which people speak. To do this we're going to use the 'piping' notation. This comes as part of the tidyverse package. Piping works as follows
+
+![](piping.png)
+Piping has the following characteristics
+
+1. There is no need to keep referring the data frame.
+2. Statements may be 'daisy-chained'.
+3. You can 'try before you buy'. This means we can check the output of a pipe before passing that to another object.
+
+This last feature means we can test our pipes without running the risk of destroying the data we have in memory.
+
+Below I have created a data frame summarising the L1 characteristics of the participants. I'm sure you will agree that the piped example is more intelligible.
+
+```{r}
+
+df2 <- count(df, primelangs)
+df3 <- arrange(df2, desc(n))
+df3$id <- seq.int(nrow(df3))
+
+df %>% count(primelangs) %>%
+  arrange(desc(n)) %>% 
+  mutate(id = row_number()) -> df.L
+
+```
+
+# Dplyr verbs
+
+The commands I have used in the pipe all belong to the `dplyr` package. Here is a list
+
+![](dplyr_verbs.png)
+
+# Visualising the data
+
+We're now going to draw some bar charts to summarise the language data using the `ggplot` package:
+
+```{r}
+
+g <- ggplot(df.L)
+g <- g + (aes(id, n))
+g <- g + geom_bar(stat = "identity")
+g <- g + xlim(0, 34)
+g <- g + ylim(0, 350000)
+g <- g + geom_text(aes(id, n, label = primelangs), angle = 45, nudge_x = 0.5, hjust =0, vjust = 0, size = 4)
+g
+
+df.L %>% filter(primelangs != "English") -> df.L.no_eng
+
+g <- ggplot(df.L.no_eng)
+g <- g + (aes(id, n))
+g <- g + geom_bar(stat = "identity")
+g <- g + xlim(0, 30)
+g <- g + ylim(0, 35000)
+g <- g + geom_text(aes(id, n, label = primelangs), angle = 45, nudge_x = 0.5, hjust =0, vjust = 0, size = 4)
+g
+
+```
+
+# Now for some real munging (wrangling!)
+
+## Filtering
+
+Okay. Now we're going to transform the data from the wide format into a long format. I was originally hoping to transpose the entire data set. However, this pretty much crashes the machine as it creates a dataset of over 15 million observations! Therefore we are just going to select participants who speak Spanish, French and German as their first languages.
+
+```{r}
+
+df %>% filter(primelangs == "Spanish" |
+              primelangs == "French" |
+              primelangs == "German") -> df
+
+```
+
+## Gathering (converting from wide to long)
+
+Now we're going to change the data from wide to long. `dplyr` (a package which is part of the tidyvers) contains a variety of commands to manipulate entire data frames. The commands `gather` and `spread` are used to go from wide-to-long and from long-to-wide respectively. This is how gather works...
+
+![](gather.png)
+
+And this is our command...
+
+```{r }
+df <- df %>%
+      gather(key = question, value = answer, starts_with("q")) %>%
+      arrange(id)
+```
+
+The expression `starts_with("q")` specify that the columns to be gathered are all those columns whose names start with "q". I have arranged the data by 'id' as otherwise they will be arranged by question.
+
+## Merging
+
+Now take a peek at the data using `head(df)` or `View(df)` to determine whether the procedure has worked. We can see that the questions have all been 'rotated'. However, it's difficult to see what each question refers to. So that we can see this, I have created a file called `questionnaire.csv` which contains a unique identifier for each question, followed by some information about the question, e.g. what linguistic construct it tests. I have assembled this from reading the appendix to the article.
+
+Now, having saved the `questionnaire.csv` file to the appropriate locaction, I am going to merge the two data sets:
+
+```{r}
+
+df.qs <- read.csv("questionnaire.csv")
+
+df %>% merge(df.qs, by.x = "question", by.y = "q") -> df
+
+```
+
+Note that the linking variable has a slightly different name in each data set (the x and y datasets). If the linking variable had the same name we would just have the option `by = "var_name"`.
+
+# A simple analysis
+
+Now let's do some actual analysis.
+
+I'm particularly interested in question 21 which tests masculine Indirect Object Pronouns. I'm interested in seeing whether Spanish speakers are particularly poor at selecting the right answer because in Spanish, the Subject and Indirect Object masculine pronouns have the same form, e.g.
+
+1. *El* dió el libro a *el*
+2. *Il* a donné le livre a *lui*
+
+German also makes a morphological distinction between the Subject and Indirect Object forms.
+
+```{r}
+
+df$primelangs <- relevel(df$primelangs, ref = "Spanish")
+
+# NB this makes sure that Spanish is the reference category
+
+df %>%
+   filter(question == "q21_1") %>%
+   glm(answer.x ~ primelangs,family=binomial(link='logit'), data = .) ->
+   model
+
+# NB we can't just omit the dataframe from the glm. `data = .` means that the dataset is inherited from the previous expression
+
+summary(model)
+
+```
+We can see that the Spanish speakers are significantly worse at this question, consistent with our hypothesis. However, it might just be the case that the Spanish respondents have less good English overall. Therefore we need to re-run the regression while controlling for basic L2 English abilities. The dataset provides an `eng_start` variable which correponds to the age when participants started English. Let's re-run the regression model controlling for both `end_start` and length of learning (which we'll have to calculate)
+
+```{r}
+
+df$length_of_learning <- df$age - df$Eng_start
+
+df %>%
+   filter(question == "q21_1") %>%
+   glm(answer.x ~ primelangs + Eng_start + length_of_learning, family=binomial(link='logit'), data = .) ->
+   model
+
+summary(model)
+
+```
+
+Yes, the Spanish speakers still perform significantly worse.
+
+Let's plot performance by language, and years spent studying English
+
+```{r}
+df %>%
+  filter(question == "q21_1") %>%
+  group_by(primelangs, length_of_learning) %>%
+  summarise(correct = mean(answer.x)) %>%
+  ggplot(aes(x = length_of_learning, y = correct, color = primelangs)) +
+  geom_line()
+
+df %>%
+  filter(question == "q21_1") %>%
+  group_by(primelangs, length_of_learning) %>%
+  summarise(correct = mean(answer.x)) %>%
+  ggplot(aes(x = length_of_learning, y = correct, color = primelangs)) +
+  geom_smooth()
+
+
+```
+
+Spanish speakers catch up after 70 years of learning! THere is much more variation for the Spanish learners than the other learners.
+
+# Over to you!
+
+What hypotheses would you like to explore?
