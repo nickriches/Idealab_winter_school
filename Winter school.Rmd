@@ -29,7 +29,7 @@ library(tidyverse)
 
 The RMarkdown file used to create this website can be accessed [here](Winter school.Rmd)
 
-The dataset is very large. If you find yourself running into performance issues, a dataset containing responses of only Spanish and German monolinguals can be accessed [here](Spanish_German.csv)
+The dataset is very large. If you find yourself running into performance issues, a dataset containing responses of only Spanish and German monolinguals can be accessed [here](Spanish_German.csv). The questionnaire data is [here](questionnaire.csv)
 
 # Dataset 1
 
