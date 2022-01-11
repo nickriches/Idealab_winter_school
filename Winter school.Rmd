@@ -1,5 +1,6 @@
 ---
-name: "Data munging (wrangling) workshop"  
+name: "Idealab Winter School"
+title: "Idealab Winter School"
 author: "Nick Riches"  
 output:  
   html_document:  
@@ -23,6 +24,12 @@ library(tidyverse)
 1.  Introduce rookies to power and potential of R
 2.  Provide R veterans with a means to practise their existing skills
 3.  Introduce a few tricks / techniques which will (hopefully) be novel for veterans: creating your own functions / contrast coding
+
+# Accessing these files
+
+The RMarkdown file used to create this website can be accessed [here](Winter school.Rmd)
+
+The dataset is very large. If you find yourself running into performance issues, a dataset containing responses of only Spanish and German monolinguals can be accessed [here](Spanish_German.csv)
 
 # Dataset 1
 
